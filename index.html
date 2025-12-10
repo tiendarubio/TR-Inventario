@@ -14,6 +14,8 @@
 
   <!-- Librerías externas -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.4/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-light">
 
@@ -25,7 +27,7 @@
         <span class="fw-semibold">TRInventario</span>
       </a>
       <div class="ms-auto text-white-50 small d-none d-md-block">
-        Avenida Morazán — Control de inventario físico
+        Avenida Morazán — Control de inventario
       </div>
     </div>
   </nav>
@@ -34,13 +36,13 @@
   <main class="container-fluid py-4">
     <div class="row g-4">
 
-      <!-- PANEL IZQUIERDO: INVENTARIO -->
+      <!-- PANEL IZQUIERDO: HOJA INVENTARIO -->
       <div class="col-xl-3 col-lg-4">
         <div class="card shadow-sm mb-4">
           <div class="card-header bg-white border-0 pb-0">
             <h6 class="card-title mb-1">
-              <i class="fa-solid fa-boxes-stacked me-2 text-primary"></i>
-              Inventario actual
+              <i class="fa-solid fa-clipboard-list me-2 text-primary"></i>
+              Hoja de inventario actual
             </h6>
             <p class="text-muted small mb-0">
               Selecciona la hoja de inventario que estás llenando (1 a 10).
@@ -49,22 +51,22 @@
           <div class="card-body">
             <!-- Selector de Inventario -->
             <div class="mb-3">
-              <label for="inventarioSelect" class="form-label fw-semibold mb-1">Hoja de inventario</label>
+              <label for="inventarioSelect" class="form-label fw-semibold mb-1">Inventario</label>
               <div class="input-group input-group-sm">
                 <span class="input-group-text bg-white">
                   <i class="fa-solid fa-hashtag text-muted"></i>
                 </span>
                 <select id="inventarioSelect" class="form-select">
-                  <option value="INV1">Inventario 1</option>
-                  <option value="INV2">Inventario 2</option>
-                  <option value="INV3">Inventario 3</option>
-                  <option value="INV4">Inventario 4</option>
-                  <option value="INV5">Inventario 5</option>
-                  <option value="INV6">Inventario 6</option>
-                  <option value="INV7">Inventario 7</option>
-                  <option value="INV8">Inventario 8</option>
-                  <option value="INV9">Inventario 9</option>
-                  <option value="INV10">Inventario 10</option>
+                  <option value="inventario1">Inventario 1</option>
+                  <option value="inventario2">Inventario 2</option>
+                  <option value="inventario3">Inventario 3</option>
+                  <option value="inventario4">Inventario 4</option>
+                  <option value="inventario5">Inventario 5</option>
+                  <option value="inventario6">Inventario 6</option>
+                  <option value="inventario7">Inventario 7</option>
+                  <option value="inventario8">Inventario 8</option>
+                  <option value="inventario9">Inventario 9</option>
+                  <option value="inventario10">Inventario 10</option>
                 </select>
               </div>
             </div>
@@ -72,15 +74,6 @@
             <!-- Fecha de inventario -->
             <div class="mb-2">
               <div id="fechaInventario" class="small text-muted fw-semibold"></div>
-            </div>
-
-            <!-- Ubicación general (opcional, solo referencia visual / meta) -->
-            <div class="mb-3">
-              <label class="form-label fw-semibold mb-1">Ubicación (opcional)</label>
-              <input id="ubicacionInput" type="text" class="form-control form-control-sm" placeholder="Ej. Pasillo 3 - Estante A">
-              <div class="form-text small text-muted">
-                Solo como referencia general del conteo. La columna <strong>ubicacion</strong> del Excel sale vacía por defecto.
-              </div>
             </div>
 
             <!-- Mensaje de éxito -->
@@ -99,20 +92,20 @@
           <div class="card-body small text-muted">
             <ul class="list-unstyled mb-0">
               <li class="mb-2 d-flex">
+                <i class="fa-solid fa-location-dot text-primary me-2 mt-1"></i>
+                <span>Completa la ubicación antes de guardar el inventario.</span>
+              </li>
+              <li class="mb-2 d-flex">
                 <i class="fa-solid fa-magnifying-glass text-primary me-2 mt-1"></i>
                 <span>Busca productos por nombre, código de inventario o código de barras.</span>
               </li>
               <li class="mb-2 d-flex">
-                <i class="fa-solid fa-warehouse text-primary me-2 mt-1"></i>
-                <span>La <strong>Bodega</strong> se toma de la columna C de la base de datos.</span>
-              </li>
-              <li class="mb-2 d-flex">
-                <i class="fa-solid fa-calendar-day text-primary me-2 mt-1"></i>
-                <span>Registra la <strong>Fecha de vencimiento</strong> usando el calendario.</span>
+                <i class="fa-solid fa-plus text-primary me-2 mt-1"></i>
+                <span>Si el producto no está en el catálogo, agrégalo manualmente.</span>
               </li>
               <li class="d-flex">
-                <i class="fa-solid fa-file-excel text-primary me-2 mt-1"></i>
-                <span>El Excel se genera en el formato requerido por el sistema contable.</span>
+                <i class="fa-solid fa-calculator text-primary me-2 mt-1"></i>
+                <span>Verifica líneas y cantidades antes de exportar.</span>
               </li>
             </ul>
           </div>
@@ -122,24 +115,38 @@
       <!-- PANEL DERECHO: DATOS + DETALLE -->
       <div class="col-xl-9 col-lg-8">
 
-        <!-- Card: Buscador de productos -->
+        <!-- Card: Datos de proveedor / ubicación y productos -->
         <div class="card shadow-sm mb-4">
           <div class="card-header bg-white border-0">
             <h6 class="card-title mb-1">
-              <i class="fa-solid fa-barcode me-2 text-primary"></i>
-              Productos
+              <i class="fa-solid fa-address-card me-2 text-primary"></i>
+              Datos y búsqueda de productos
             </h6>
           </div>
           <div class="card-body border-top">
             <div class="row g-3">
+              <!-- Proveedor (opcional en inventario) -->
+              <div class="col-md-4 position-relative">
+                <label class="form-label fw-semibold mb-1">Proveedor (opcional)</label>
+                <input id="proveedorInput" type="text" class="form-control form-control-sm" placeholder="Escriba para buscar proveedor...">
+                <ul id="provSuggestions" class="list-group search-suggestions"></ul>
+              </div>
+              <!-- Ubicación -->
+              <div class="col-md-4">
+                <label class="form-label fw-semibold mb-1">Ubicación del producto</label>
+                <input id="ubicacionInput" type="text" class="form-control form-control-sm" placeholder="Ej. Bodega, pasillo 3, góndola A">
+              </div>
               <!-- Buscador de productos -->
-              <div class="col-md-8 position-relative">
+              <div class="col-md-4 position-relative">
                 <label class="form-label fw-semibold mb-1">Buscar producto (catálogo)</label>
                 <div class="input-group input-group-sm">
                   <span class="input-group-text bg-white">
                     <i class="fa-solid fa-magnifying-glass text-muted"></i>
                   </span>
                   <input id="searchInput" type="text" class="form-control" placeholder="Nombre, código inventario o código de barras" autocomplete="off">
+                  <button id="btnScan" class="btn btn-outline-secondary" type="button" title="Escanear código de barras">
+                    <i class="fa-solid fa-barcode"></i>
+                  </button>
                   <button id="btnOpenManual" class="btn btn-outline-secondary" type="button" title="Agregar producto manual">
                     <i class="fa-solid fa-plus"></i>
                   </button>
@@ -147,6 +154,28 @@
                 <ul id="suggestions" class="list-group search-suggestions"></ul>
                 <div class="form-text small text-muted mt-1">
                   Si no se encuentra en el catálogo, puedes agregarlo manualmente con el botón <strong>+</strong>.
+                </div>
+              </div>
+            </div>
+
+            <!-- Scanner de código de barras -->
+            <div class="row mt-2">
+              <div class="col-12">
+                <div id="scanWrap" class="scan-wrap">
+                  <div class="scanner">
+                    <video id="scanVideo" playsinline></video>
+                    <div class="scan-overlay"></div>
+                    <div class="scan-msg">Apunta al código de barras…</div>
+                  </div>
+                  <div class="d-flex flex-wrap gap-2 mt-2 align-items-center">
+                    <button id="btnScanStop" class="btn btn-sm btn-outline-danger">
+                      <i class="fa-solid fa-stop"></i> Detener
+                    </button>
+                    <input id="fileScan" class="form-control form-control-sm" type="file" accept="image/*" capture="environment" style="max-width:280px;">
+                    <small class="text-muted ms-1">
+                      En dispositivos sin escaneo en vivo, usa la opción de <strong>archivo</strong> o la pistola de códigos.
+                    </small>
+                  </div>
                 </div>
               </div>
             </div>
@@ -163,18 +192,24 @@
                   Detalle de inventario
                 </h6>
                 <p class="text-muted small mb-0">
-                  Correlativo, datos del producto, bodega, fecha de vencimiento y cantidad física.
+                  Conteo de líneas de inventario por producto.
                 </p>
               </div>
               <!-- Toolbar -->
               <div class="btn-toolbar gap-2" role="toolbar" aria-label="Toolbar">
-                <button id="saveInventario" class="btn btn-primary btn-sm">
+                <button id="saveReception" class="btn btn-primary btn-sm">
                   <i class="fa-solid fa-floppy-disk me-1"></i> Guardar
+                </button>
+                <button id="exportPDF" class="btn btn-outline-danger btn-sm" disabled>
+                  <i class="fa-solid fa-file-pdf me-1"></i> PDF
+                </button>
+                <button id="printPDF" class="btn btn-outline-info btn-sm" disabled>
+                  <i class="fa-solid fa-print me-1"></i> Imprimir
                 </button>
                 <button id="exportExcel" class="btn btn-outline-success btn-sm" disabled>
                   <i class="fa-solid fa-file-excel me-1"></i> Excel
                 </button>
-                <button id="clearInventario" class="btn btn-outline-secondary btn-sm" disabled>
+                <button id="clearReception" class="btn btn-outline-secondary btn-sm" disabled>
                   <i class="fa-solid fa-trash-can me-1"></i> Limpiar
                 </button>
               </div>
@@ -182,7 +217,7 @@
           </div>
           <div class="card-body border-top">
             <div class="table-responsive table-checklist-wrapper">
-              <table class="table table-sm table-bordered align-middle mb-0" id="inventarioTable">
+              <table class="table table-sm table-bordered align-middle mb-0" id="recepcionTable">
                 <thead class="table-light">
                   <tr>
                     <th class="text-center" style="width: 48px;">#</th>
@@ -195,7 +230,7 @@
                     <th class="text-center text-nowrap">Acciones</th>
                   </tr>
                 </thead>
-                <tbody id="inventarioBody"></tbody>
+                <tbody id="recepcionBody"></tbody>
               </table>
             </div>
 
@@ -230,12 +265,12 @@
               <input id="mCodigo" type="text" class="form-control" placeholder="Código de barras">
             </div>
             <div class="col-md-4">
-              <label class="form-label">Nombre</label>
+              <label class="form-label">Nombre del producto</label>
               <input id="mNombre" type="text" class="form-control" placeholder="Nombre del producto">
             </div>
             <div class="col-md-4">
               <label class="form-label">Código inventario</label>
-              <input id="mCodInv" type="text" class="form-control" placeholder="Código inventario">
+              <input id="mCodInv" type="text" class="form-control" value="N/A">
             </div>
             <div class="col-md-4">
               <label class="form-label">Bodega</label>
@@ -249,6 +284,9 @@
               <label class="form-label">Cantidad</label>
               <input id="mCantidad" type="number" class="form-control" placeholder="Cantidad" min="0" step="1">
             </div>
+          </div>
+          <div class="mt-3 small text-muted">
+            Este producto se guardará únicamente en la hoja de inventario actual (no se agrega al catálogo maestro).
           </div>
         </div>
         <div class="modal-footer">
