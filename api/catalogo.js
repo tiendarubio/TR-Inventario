@@ -3,7 +3,8 @@ export default async function handler(req, res) {
   try {
     const apiKey  = process.env.GOOGLE_SHEETS_API_KEY;
     const sheetId = process.env.GOOGLE_SHEETS_SHEET_ID || '1b5B9vp0GKc4T_mORssdj-J2vgc-xEO5YAFkcrVX-nHI';
-    const range   = process.env.GOOGLE_SHEETS_RANGE || 'bd!A2:D5000';
+    const range   = process.env.GOOGLE_SHEETS_RANGE || 'bd!A2:F5000';
+    // A: descrip, B: idarticulo, C: Bodega, D: codigobarra, E: idgrupo, F: idsubgrupo
 
     if (!apiKey) {
       return res.status(500).json({ error: 'Falta GOOGLE_SHEETS_API_KEY en variables de entorno.' });

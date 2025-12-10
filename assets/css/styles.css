@@ -15,12 +15,12 @@ body {
   overflow-y: auto;
 }
 
-#recepcionTable {
+#inventarioTable {
   width: 100%;
   table-layout: auto;
 }
 
-#recepcionTable .btn i {
+#inventarioTable .btn i {
   font-size: 0.9rem;
 }
 
@@ -55,47 +55,4 @@ body {
   .table-checklist-wrapper {
     max-height: none;
   }
-}
-
-
-/* Área de escaneo de códigos de barras */
-.scan-wrap {
-  display: none;
-  margin-top: 0.75rem;
-}
-
-.scan-wrap.active {
-  display: block;
-}
-
-.scanner {
-  position: relative;
-  border: 1.5px solid #e9ecef;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #000;
-}
-
-.scanner video {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-.scan-overlay {
-  position: absolute;
-  inset: 0;
-  border: 2px dashed rgba(255, 255, 255, 0.6);
-  pointer-events: none;
-}
-
-.scan-msg {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 8px;
-  text-align: center;
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-  font-size: 0.8rem;
 }
