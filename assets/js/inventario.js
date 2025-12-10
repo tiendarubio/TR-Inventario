@@ -696,30 +696,86 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // Nuevo exportador Excel con formato requerido
   btnExcel.addEventListener('click', () => {
     if (body.rows.length === 0) return;
-    const fecha = new Date().toISOString().split('T')[0];
-    const data  = [['correlativo','codigo_barras','nombre','codigo_inventario','bodega','fecha_vencimiento','cantidad']];
 
-    [...body.getElementsByTagName('tr')].forEach((tr, idx) => {
-      const correlativo  = idx + 1;
-      const codigoBarras = tr.cells[1].innerText.trim();
-      const nombre       = tr.cells[2].innerText.trim();
-      const codInvent    = tr.cells[3].innerText.trim();
-      const bodega       = tr.cells[4].innerText.trim();
-      const fechaVenc    = (tr.querySelector('.vencimiento')?.value || '').trim();
-      const qty          = parseNum(tr.querySelector('.qty').value);
-      data.push([correlativo, codigoBarras, nombre, codInvent, bodega, fechaVenc, qty]);
+    // Fecha física del inventario en formato 2025-12-10
+    const fechaFis = new Date().toISOString().split('T')[0];
+    const ubicacionValor = ubicacionInput ? (ubicacionInput.value || '') : '';
+
+    // Encabezados en el orden solicitado
+    const data = [[
+      'fechafis',
+      'idgrupo',
+      'idsubgrupo',
+      'idarticulo',
+      'descrip',
+      'codigobarra',
+      'cod_unidad',
+      'ubicacion',
+      'Bodega_5'
+    ]];
+
+    const catalogo = (window.CATALOGO_CACHE || []);
+
+    [...body.getElementsByTagName('tr')].forEach(tr => {
+      const nombreUI       = tr.cells[2].innerText.trim(); // descrip en UI
+      const codInventUI    = tr.cells[3].innerText.trim(); // idarticulo (B)
+      const codigoBarrasUI = tr.cells[1].innerText.trim(); // codigobarra (D)
+      const qty            = parseNum(tr.querySelector('.qty').value);
+
+      // Buscar fila en catálogo para idgrupo (E) e idsubgrupo (F)
+      let match = null;
+      if (catalogo && catalogo.length) {
+        match = catalogo.find(r => {
+          const idartCatalogo = (r[1] || '').toString().trim(); // B
+          const codBarCatalog = (r[3] || '').toString().trim(); // D
+          const sameCodInv    = codInventUI && idartCatalogo && idartCatalogo === codInventUI;
+          const sameBar       = codigoBarrasUI && codBarCatalog && codBarCatalog === codigoBarrasUI;
+          if (sameCodInv && sameBar) return true;
+          if (sameBar) return true;
+          if (sameCodInv) return true;
+          return false;
+        }) || null;
+      }
+
+      const descrip   = match ? ((match[0] || '').toString().trim() || nombreUI)          : nombreUI;       // A
+      const idart     = match ? ((match[1] || '').toString().trim() || codInventUI)      : codInventUI;    // B
+      const codBar    = match ? ((match[3] || '').toString().trim() || codigoBarrasUI)   : codigoBarrasUI; // D
+      const idgrupo   = match ? ((match[4] || '').toString().trim())                     : '';             // E
+      const idsubgr   = match ? ((match[5] || '').toString().trim())                     : '';             // F
+      const codUnidad = 6; // fijo
+
+      data.push([
+        fechaFis,        // fechafis
+        idgrupo,         // idgrupo
+        idsubgr,         // idsubgrupo
+        idart,           // idarticulo
+        descrip,         // descrip
+        codBar,          // codigobarra
+        codUnidad,       // cod_unidad
+        ubicacionValor,  // ubicacion
+        qty              // Bodega_5
+      ]);
     });
 
-    const wb   = XLSX.utils.book_new();
-    const ws   = XLSX.utils.aoa_to_sheet(data);
+    const wb    = XLSX.utils.book_new();
+    const ws    = XLSX.utils.aoa_to_sheet(data);
     XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
-    const wbout= XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([wbout], { type: 'application/octet-stream' });
-    const a    = document.createElement('a');
-    a.href     = URL.createObjectURL(blob);
-    a.download = 'INVENTARIO_AVM_' + sanitizeName(ubicacionInput ? (ubicacionInput.value || '') : '') + '_' + (inventarioSelect ? inventarioSelect.value : '') + '_' + fecha + '.xlsx';
+
+    const fechaArchivo = new Date().toISOString().split('T')[0];
+    const nombreArchivo =
+      'INVENTARIO_AVM_' +
+      sanitizeName(ubicacionValor) + '_' +
+      (inventarioSelect ? inventarioSelect.value : '') + '_' +
+      fechaArchivo + '.xlsx';
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob  = new Blob([wbout], { type: 'application/octet-stream' });
+    const a     = document.createElement('a');
+    a.href      = URL.createObjectURL(blob);
+    a.download  = nombreArchivo;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
