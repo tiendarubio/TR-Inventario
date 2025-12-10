@@ -20,11 +20,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const mNombre       = $('mNombre');
   const mCodInv       = $('mCodInv');
   const mBodega       = $('mBodega');
+  const mVencimiento  = $('mVencimiento');
   const mCantidad     = $('mCantidad');
   const manualModalEl = document.getElementById('manualModal');
   const manualModal   = new bootstrap.Modal(manualModalEl);
 
-  const modalInputs = [mCodigo, mNombre, mCodInv, mBodega, mCantidad];
+  const modalInputs = [mCodigo, mNombre, mCodInv, mBodega, mVencimiento, mCantidad];
   modalInputs.forEach((inp, idx) => {
     inp.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -186,11 +187,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   $('btnAddManual').addEventListener('click', () => {
-    const codigo  = (mCodigo.value || '').trim();
-    const nombre  = (mNombre.value || '').trim();
-    const codInv  = (mCodInv.value || 'N/A').trim() || 'N/A';
-    const bodega  = (mBodega.value || '').trim();
-    const qty     = parseNum(mCantidad.value);
+    const codigo   = (mCodigo.value || '').trim();
+    const nombre   = (mNombre.value || '').trim();
+    const codInv   = (mCodInv.value || 'N/A').trim() || 'N/A';
+    const bodega   = (mBodega.value || '').trim();
+    const fechaVenc= (mVencimiento.value || '').trim();
+    const qty      = parseNum(mCantidad.value);
 
     if (!codigo || !nombre) {
       Swal.fire('Campos faltantes', 'Ingrese código de barras y nombre.', 'info');
@@ -201,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    addRow({ barcode: codigo, nombre, codInvent: codInv, bodega, cantidad: qty });
+    addRow({ barcode: codigo, nombre, codInvent: codInv, bodega, fechaVenc, cantidad: qty });
     manualModal.hide();
     searchInput.focus();
   });
@@ -413,16 +415,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnScanStop.addEventListener('click', stopScanner);
   }
 
-  function addRowAndFocus({ barcode, nombre, codInvent, bodega }) {
-    addRow({ barcode, nombre, codInvent, bodega });
+  function addRowAndFocus({ barcode, nombre, codInvent, bodega, fechaVenc }) {
+    addRow({ barcode, nombre, codInvent, bodega, fechaVenc });
     const firstRow = body.firstElementChild;
     if (firstRow) {
-      const qty = firstRow.querySelector('.qty');
-      if (qty) qty.focus();
+      const venc = firstRow.querySelector('.vencimiento');
+      const qty  = firstRow.querySelector('.qty');
+      if (venc) venc.focus();
+      else if (qty) qty.focus();
     }
   }
 
-  function addRow({ barcode, nombre, codInvent, bodega = '', cantidad = '' }) {
+  function addRow({ barcode, nombre, codInvent, bodega = '', fechaVenc = '', cantidad = '' }) {
     const tr = document.createElement('tr');
     tr.innerHTML = '' +
       '<td></td>' +
@@ -430,6 +434,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       '<td>' + (nombre || '') + '</td>' +
       '<td>' + (codInvent || 'N/A') + '</td>' +
       '<td>' + (bodega || '') + '</td>' +
+      '<td><input type="date" class="form-control form-control-sm vencimiento" value="' + (fechaVenc || '') + '"></td>' +
       '<td><input type="number" class="form-control form-control-sm qty" min="0" step="1" value="' + (cantidad || '') + '"></td>' +
       '<td><button class="btn btn-outline-danger btn-sm" title="Eliminar fila"><i class="fas fa-trash"></i></button></td>';
     body.insertBefore(tr, body.firstChild);
@@ -437,8 +442,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     suggestions.innerHTML = '';
     searchInput.value = '';
 
+    const venc   = tr.querySelector('.vencimiento');
     const qty    = tr.querySelector('.qty');
     const delBtn = tr.querySelector('button');
+
+    if (venc) {
+      venc.addEventListener('focus', () => {
+        try {
+          if (venc.showPicker) venc.showPicker();
+        } catch (e) {}
+      });
+      venc.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (qty) qty.focus();
+        }
+      });
+    }
 
     qty.addEventListener('input', recalcTotals);
     qty.addEventListener('keydown', (e) => {
@@ -516,12 +536,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const items = [...body.getElementsByTagName('tr')].map(tr => {
-      const qty = parseNum(tr.querySelector('.qty').value);
+      const qty       = parseNum(tr.querySelector('.qty').value);
+      const fechaVenc = (tr.querySelector('.vencimiento')?.value || '').trim();
       return {
         codigo_barras:     tr.cells[1].innerText.trim(),
         nombre:            tr.cells[2].innerText.trim(),
         codigo_inventario: tr.cells[3].innerText.trim(),
         bodega:            tr.cells[4].innerText.trim(),
+        fecha_vencimiento: fechaVenc,
         cantidad:          qty
       };
     });
@@ -572,6 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nombre:    it.nombre || '',
             codInvent: it.codigo_inventario || 'N/A',
             bodega:    it.bodega || '',
+            fechaVenc: it.fecha_vencimiento || '',
             cantidad:  (it.cantidad !== undefined && it.cantidad !== null) ? Number(it.cantidad) : ''
           });
         });
@@ -609,6 +632,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             nombre:    it.nombre || '',
             codInvent: it.codigo_inventario || 'N/A',
             bodega:    it.bodega || '',
+            fechaVenc: it.fecha_vencimiento || '',
             cantidad:  (it.cantidad !== undefined && it.cantidad !== null) ? Number(it.cantidad) : ''
           });
         });
@@ -646,12 +670,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       tr.cells[2].innerText,
       tr.cells[3].innerText,
       tr.cells[4].innerText,
+      (tr.querySelector('.vencimiento')?.value || ''),
       tr.querySelector('.qty').value
     ]));
 
     doc.autoTable({
       startY: 40,
-      head: [['#','Código barras','Producto','Cod. Inv.','Bodega','Cant.']],
+      head: [['#','Código barras','Producto','Cod. Inv.','Bodega','F. vencimiento','Cant.']],
       body: rows,
       styles: { fontSize: 9, cellPadding: 2 }
     });
@@ -674,16 +699,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnExcel.addEventListener('click', () => {
     if (body.rows.length === 0) return;
     const fecha = new Date().toISOString().split('T')[0];
-    const data  = [['correlativo','codigo_barras','nombre','codigo_inventario','bodega','cantidad']];
+    const data  = [['correlativo','codigo_barras','nombre','codigo_inventario','bodega','fecha_vencimiento','cantidad']];
 
     [...body.getElementsByTagName('tr')].forEach((tr, idx) => {
-      const correlativo = idx + 1;
+      const correlativo  = idx + 1;
       const codigoBarras = tr.cells[1].innerText.trim();
       const nombre       = tr.cells[2].innerText.trim();
       const codInvent    = tr.cells[3].innerText.trim();
       const bodega       = tr.cells[4].innerText.trim();
+      const fechaVenc    = (tr.querySelector('.vencimiento')?.value || '').trim();
       const qty          = parseNum(tr.querySelector('.qty').value);
-      data.push([correlativo, codigoBarras, nombre, codInvent, bodega, qty]);
+      data.push([correlativo, codigoBarras, nombre, codInvent, bodega, fechaVenc, qty]);
     });
 
     const wb   = XLSX.utils.book_new();
