@@ -421,8 +421,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (firstRow) {
       const venc = firstRow.querySelector('.vencimiento');
       const qty  = firstRow.querySelector('.qty');
-      if (venc) venc.focus();
-      else if (qty) qty.focus();
+      if (qty) qty.focus();
+      else if (venc) venc.focus();
     }
   }
 
@@ -481,8 +481,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       '<td>' + (nombre || '') + '</td>' +
       '<td>' + (codInvent || 'N/A') + '</td>' +
       '<td>' + (bodega || '') + '</td>' +
-      '<td><input type="date" class="form-control form-control-sm vencimiento" value="' + (fechaVenc || '') + '"></td>' +
       '<td><input type="number" class="form-control form-control-sm qty" min="0" step="1" value="' + (cantidad || '') + '"></td>' +
+      '<td><input type="date" class="form-control form-control-sm vencimiento" value="' + (fechaVenc || '') + '"></td>' +
       '<td><button class="btn btn-outline-danger btn-sm" title="Eliminar fila"><i class="fas fa-trash"></i></button></td>';
     body.insertBefore(tr, body.firstChild);
     renumber();
@@ -502,7 +502,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       venc.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          if (qty) qty.focus();
+          if (searchInput) searchInput.focus();
         }
       });
     }
@@ -512,7 +512,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       qty.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
-          if (searchInput) searchInput.focus();
+          if (venc) venc.focus();
         }
       });
     }
@@ -715,19 +715,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       doc.text('Fecha: ' + fecha, 10, 34);
     }
 
-    const rows = [...body.getElementsByTagName('tr')].map((tr, i) => ([
-      i + 1,
-      tr.cells[1].innerText,
-      tr.cells[2].innerText,
-      tr.cells[3].innerText,
-      tr.cells[4].innerText,
-      (tr.querySelector('.vencimiento')?.value || ''),
-      tr.querySelector('.qty').value
-    ]));
+    const rows = [...body.getElementsByTagName('tr')].map((tr, i) => {
+      const bodega = tr.cells[4].innerText;
+      const qty    = tr.querySelector('.qty').value;
+      const fechaV = (tr.querySelector('.vencimiento')?.value || '');
+      return [
+        i + 1,
+        tr.cells[1].innerText,
+        tr.cells[2].innerText,
+        tr.cells[3].innerText,
+        bodega,
+        qty,
+        fechaV
+      ];
+    });
 
     doc.autoTable({
       startY: 40,
-      head: [['#','Código barras','Producto','Cod. Inv.','Bodega','F. vencimiento','Cant.']],
+      head: [['#','Código barras','Producto','Cod. Inv.','Bodega','Cant.','F. vencimiento']],
       body: rows,
       styles: { fontSize: 9, cellPadding: 2 }
     });
