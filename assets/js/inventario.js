@@ -426,7 +426,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  function addRow({ barcode, nombre, codInvent, bodega = '', fechaVenc = '', cantidad = '' }) {
+  // Busca si el producto ya existe en la tabla (por código de inventario y/o código de barras)
+  function findExistingRow(barcode, codInvent) {
+    const barcodeTrim = (barcode || '').toString().trim();
+    const codInvTrim  = (codInvent || '').toString().trim();
+    const rows = [...body.getElementsByTagName('tr')];
+    for (const tr of rows) {
+      const rowBarcode = tr.cells[1]?.innerText.trim() || '';
+      const rowCodInv  = tr.cells[3]?.innerText.trim() || '';
+      const sameBarcode = barcodeTrim && rowBarcode && rowBarcode === barcodeTrim;
+      const sameCodInv  = codInvTrim && rowCodInv && rowCodInv === codInvTrim;
+      if ((sameBarcode && sameCodInv) || sameBarcode || sameCodInv) {
+        return tr;
+      }
+    }
+    return null;
+  }
+
+  function addRow({ barcode, nombre, codInvent, bodega = '', fechaVenc = '', cantidad = '', skipDuplicateCheck = false }) {
+    // Control de duplicados: pregunta si desea sumar cantidades o cancelar
+    if (!skipDuplicateCheck) {
+      const existing = findExistingRow(barcode, codInvent);
+      if (existing) {
+        Swal.fire({
+          title: 'Producto ya agregado',
+          text: 'Este producto ya existe en la tabla. ¿Desea sumar la cantidad a la existente o cancelar?',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: 'Sumar cantidades',
+          cancelButtonText: 'Cancelar'
+        }).then(res => {
+          if (res.isConfirmed) {
+            const qtyInput = existing.querySelector('.qty');
+            const currentQty = parseNum(qtyInput && qtyInput.value);
+            const addQty = parseNum(cantidad);
+            if (addQty > 0 && qtyInput) {
+              qtyInput.value = currentQty + addQty;
+              recalcTotals();
+            }
+            // En cualquier caso, enfocar y resaltar la fila existente
+            if (qtyInput) qtyInput.focus();
+            existing.classList.add('table-warning');
+            setTimeout(() => existing.classList.remove('table-warning'), 800);
+          }
+        });
+        return;
+      }
+    }
+
     const tr = document.createElement('tr');
     tr.innerHTML = '' +
       '<td></td>' +
@@ -440,7 +487,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     body.insertBefore(tr, body.firstChild);
     renumber();
     suggestions.innerHTML = '';
-    searchInput.value = '';
+    if (searchInput) searchInput.value = '';
 
     const venc   = tr.querySelector('.vencimiento');
     const qty    = tr.querySelector('.qty');
@@ -460,13 +507,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-    qty.addEventListener('input', recalcTotals);
-    qty.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        searchInput.focus();
-      }
-    });
+    if (qty) {
+      qty.addEventListener('input', recalcTotals);
+      qty.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (searchInput) searchInput.focus();
+        }
+      });
+    }
 
     delBtn.addEventListener('click', () => {
       Swal.fire({
@@ -595,7 +644,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             codInvent: it.codigo_inventario || 'N/A',
             bodega:    it.bodega || '',
             fechaVenc: it.fecha_vencimiento || '',
-            cantidad:  (it.cantidad !== undefined && it.cantidad !== null) ? Number(it.cantidad) : ''
+            cantidad:  (it.cantidad !== undefined && it.cantidad !== null) ? Number(it.cantidad) : '',
+            skipDuplicateCheck: true
           });
         });
         recalcTotals();
@@ -633,7 +683,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             codInvent: it.codigo_inventario || 'N/A',
             bodega:    it.bodega || '',
             fechaVenc: it.fecha_vencimiento || '',
-            cantidad:  (it.cantidad !== undefined && it.cantidad !== null) ? Number(it.cantidad) : ''
+            cantidad:  (it.cantidad !== undefined && it.cantidad !== null) ? Number(it.cantidad) : '',
+            skipDuplicateCheck: true
           });
         });
         recalcTotals();
